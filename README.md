@@ -71,7 +71,7 @@ Upload these files to your web host, keeping this layout:
 
 ```sh
 docker build -t santa .
-docker run -p 80:80 -v "$PWD/data:/usr/share/nginx/html/data:ro" santa
+docker run -p 8080:80 -v "$PWD/data:/usr/share/nginx/html/data:ro" santa
 ```
 
 `data/` is in `.gitignore`, so the draw is never committed or baked into the image. A new draw is live as soon as `setup.js` finishes, with no rebuild or restart needed.
