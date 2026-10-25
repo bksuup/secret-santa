@@ -1,0 +1,4 @@
+# The image only needs nginx.conf and src/; keep the draw and everything else out of the build context.
+*
+!nginx.conf
+!src/

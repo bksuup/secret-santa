@@ -60,7 +60,7 @@
     <!-- Inline so the form never does a plain submit (password in the URL), even if the module below fails to load. -->
     <form id="form" onsubmit="event.preventDefault(); if (location.protocol === 'file:') error.textContent = 'Open this page through a web server, not as a file (see README).'">
       <p>
-        <label for="name">First name</label><br>
+        <label for="name">Your name (as the organiser wrote it)</label><br>
         <input id="name" name="name" autocomplete="username" required>
       </p>
       <p>
@@ -92,11 +92,11 @@
       let data;
       try {
         // Fetched on every login, uncached, so a re-run of setup.js is picked up without a reload.
-        const res = await fetch("assignments.json", { cache: "no-store" });
+        const res = await fetch("data/assignments.json", { cache: "no-store" });
         if (!res.ok) throw new Error(res.status);
         data = await res.json();
       } catch {
-        $("error").textContent = "🎄 Couldn't load the draw. Has the organiser published assignments.json?";
+        $("error").textContent = "🎄 Couldn't load the draw. Has the organiser published data/assignments.json?";
         button.disabled = false;
         return;
       }

@@ -3,7 +3,8 @@ const enc = new TextEncoder();
 const b64 = (bytes) => btoa(String.fromCharCode(...bytes));
 const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-export const normalise = (name) => name.trim().toLowerCase();
+// Username: "John Smith" -> "john_smith". Used for both setup and login, so they always match.
+export const normalise = (name) => name.trim().toLowerCase().replace(/\s+/g, "_");
 
 async function key(password, salt) {
   const base = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
@@ -12,17 +13,24 @@ async function key(password, salt) {
     base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 }
 
+// Every plaintext is zero-padded to SIZE bytes, so the public ciphertext length can't hint at the name.
+const SIZE = 64;
+
 export async function encrypt(text, password) {
+  const bytes = enc.encode(text);
+  if (bytes.length > SIZE) throw new Error(`Name longer than ${SIZE} bytes: ${text}`);
+  const padded = new Uint8Array(SIZE);
+  padded.set(bytes);
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await key(password, salt), enc.encode(text));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await key(password, salt), padded);
   return { salt: b64(salt), iv: b64(iv), ct: b64(new Uint8Array(ct)) };
 }
 
 // Throws if the password is wrong (AES-GCM authentication fails).
 export async function decrypt({ salt, iv, ct }, password) {
   const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(iv) }, await key(password, unb64(salt)), unb64(ct));
-  return new TextDecoder().decode(pt);
+  return new TextDecoder().decode(pt).replace(/\0+$/, "");
 }
 
 // Shuffle, then each person gives to the next one in the circle: nobody can get themselves.
