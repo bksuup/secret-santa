@@ -63,14 +63,14 @@ Upload these files to your web host:
 
 `setup.js`, the tests and the other files are not needed on the site (publishing them does no harm; they contain no secrets).
 
-**Docker:** after running `setup.js`, build and run the nginx image (it serves only these three files):
+**Docker:** the image holds only the site. Mount the `data/` folder made by `setup.js` into it, read-only:
 
 ```sh
 docker build -t santa .
-docker run -p 80:80 santa
+docker run -p 80:80 -v "$PWD/data:/usr/share/nginx/html/data:ro" santa
 ```
 
-`data/` is in `.gitignore`, so the draw is never committed. Rebuild the image after every new draw.
+`data/` is in `.gitignore`, so the draw is never committed or baked into the image. A new draw is live as soon as `setup.js` finishes, with no rebuild or restart needed.
 
 ### Try it locally first
 
