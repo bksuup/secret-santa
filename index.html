@@ -70,7 +70,26 @@
       <button type="submit">🎅 Ho ho ho, show me!</button>
     </form>
     <p id="error" role="alert"></p>
-    <p class="note">You got your password from the organiser. It is unique to you.</p>
+    <p class="note">Use the password you got when you joined.</p>
+  </section>
+
+  <section id="join">
+    <h2>New here? Join the draw!</h2>
+    <form id="join-form" onsubmit="event.preventDefault()">
+      <p>
+        <label for="join-name">First name</label><br>
+        <input id="join-name" required pattern=".*\S.*">
+      </p>
+      <button type="submit">🦌 Count me in!</button>
+    </form>
+    <div id="joined" hidden>
+      <p>Your password (only you will ever see it, <strong>write it down!</strong>):</p>
+      <p class="reveal"><code id="new-password"></code></p>
+      <p><label for="code">Send this join code to the organiser:</label></p>
+      <textarea id="code" rows="4" readonly style="width:100%"></textarea>
+      <button type="button" id="copy">📋 Copy join code</button>
+    </div>
+    <p class="note">Joining again makes a new password and code. Only your latest code counts.</p>
   </section>
 
   <section id="result" hidden>
@@ -82,7 +101,7 @@
   </section>
 
   <script type="module">
-    import { decrypt, normalise } from "./santa.js";
+    import { join, normalise, reveal } from "./santa.js";
     const $ = (id) => document.getElementById(id);
     $("form").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -103,9 +122,9 @@
       try {
         const entry = data[normalise($("name").value)];
         if (!entry) throw new Error();
-        $("receiver").textContent = await decrypt(entry, $("password").value.trim());
+        $("receiver").textContent = await reveal(entry, $("password").value.trim());
         $("giver").textContent = entry.name;
-        $("login").hidden = true;
+        $("login").hidden = $("join").hidden = true;
         $("result").hidden = false;
       } catch {
         // Same message for unknown name and wrong password, so no one can probe for names.
@@ -115,11 +134,21 @@
       }
     });
 
+    $("join-form").addEventListener("submit", async (e) => {
+      e.submitter.disabled = true;
+      const { password, code } = await join($("join-name").value);
+      $("new-password").textContent = password;
+      $("code").value = code;
+      $("joined").hidden = false;
+      e.submitter.disabled = false;
+    });
+    $("copy").addEventListener("click", () => navigator.clipboard.writeText($("code").value));
+
     $("logout").addEventListener("click", () => {
       $("form").reset();
       $("receiver").textContent = $("giver").textContent = "";
       $("result").hidden = true;
-      $("login").hidden = false;
+      $("login").hidden = $("join").hidden = false;
     });
   </script>
 
