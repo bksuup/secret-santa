@@ -2,8 +2,9 @@
 // Writes data/assignments.json (encrypted, safe to publish) and prints each person's password.
 // The pairings themselves are never printed.
 import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
-import { assign, encrypt, normalise, password } from "./santa.js";
+import { assign, encrypt, normalise, password } from "./src/santa.js";
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 const names = (await rl.question("Participants (comma-separated): ")).split(",").map((n) => n.trim()).filter(Boolean);
@@ -19,6 +20,8 @@ for (const [giver, receiver] of assign(names).sort(([a], [b]) => a.localeCompare
   logins.push(`${giver} (username: ${normalise(giver)}): ${pw}`);
 }
 
-mkdirSync("data", { recursive: true });
-writeFileSync("data/assignments.json", JSON.stringify(data, null, 2));
+// Next to this script, not the current directory, so it always lands in the repo's data/.
+const dir = join(import.meta.dirname, "data");
+mkdirSync(dir, { recursive: true });
+writeFileSync(join(dir, "assignments.json"), JSON.stringify(data, null, 2));
 console.log("Wrote data/assignments.json. Send each person their password:\n" + logins.join("\n"));

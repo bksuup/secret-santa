@@ -1,7 +1,7 @@
 // Run: node --test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assign, decrypt, encrypt, normalise, password } from "./santa.js";
+import { assign, decrypt, encrypt, normalise, password } from "../src/santa.js";
 
 test("nobody gets themselves and everyone receives once", () => {
   for (let n = 2; n < 12; n++) {
