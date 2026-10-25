@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Secret Santa</title>
+  <style>
+    body {
+      font-family: "Comic Sans MS", "Comic Neue", cursive;
+      max-width: 480px; margin: 0 auto; padding: 1rem;
+      color: #fff;
+      background: #0b3d1f radial-gradient(#fff 1.5px, transparent 1.5px) 0 0 / 28px 28px; /* polka-dot "snow" */
+    }
+    h1 {
+      text-align: center; font-size: 2.6rem; color: #ffd700;
+      text-shadow: 3px 3px 0 #c8102e;
+    }
+    h1::before, h1::after { content: "🎄"; }
+    h2 { color: #c8102e; margin-top: 0; }
+    h2::before { content: "🎁 "; }
+    section {
+      background: #fffaf0; color: #222;
+      border: 6px solid; border-image: repeating-linear-gradient(45deg, #c8102e 0 12px, #fff 12px 24px) 6; /* candy cane */
+      padding: 1rem; margin-bottom: 2rem;
+    }
+    input { width: 100%; box-sizing: border-box; padding: .5rem; border: 2px solid #0b3d1f; border-radius: 8px; font: inherit; }
+    button {
+      background: #c8102e; color: #fff; font: inherit; font-size: 1.1rem;
+      border: 3px solid #ffd700; border-radius: 999px; padding: .5rem 1.25rem; cursor: pointer;
+    }
+    button:hover, button:focus-visible { background: #0b3d1f; }
+    .note { color: #555; font-size: .85rem; }
+    .reveal { font-size: 2.5rem; text-align: center; color: #0b3d1f; }
+    .reveal::before, .reveal::after { content: " ⭐ "; }
+    [role="alert"] { color: #c8102e; font-weight: bold; }
+    footer { text-align: center; color: #ffd700; }
+    .snow { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+    .snow span { position: absolute; top: -2rem; color: #fff; font-size: 1.5rem; animation: fall linear infinite; }
+    @keyframes fall { to { transform: translateY(110vh) rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .snow { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="snow" aria-hidden="true">
+    <span style="left:5%;animation-duration:9s;animation-delay:-0s">❄</span>
+    <span style="left:15%;animation-duration:12s;animation-delay:-3s">❄</span>
+    <span style="left:25%;animation-duration:8s;animation-delay:-1s">❄</span>
+    <span style="left:35%;animation-duration:14s;animation-delay:-5s">❄</span>
+    <span style="left:45%;animation-duration:10s;animation-delay:-2s">❄</span>
+    <span style="left:55%;animation-duration:11s;animation-delay:-6s">❄</span>
+    <span style="left:65%;animation-duration:9s;animation-delay:-4s">❄</span>
+    <span style="left:75%;animation-duration:13s;animation-delay:-1s">❄</span>
+    <span style="left:85%;animation-duration:10s;animation-delay:-3s">❄</span>
+    <span style="left:95%;animation-duration:12s;animation-delay:-0s">❄</span>
+  </div>
+  <h1>Secret Santa</h1>
+
+  <section id="login">
+    <h2>Who are you?</h2>
+    <!-- Inline so the form never does a plain submit (password in the URL), even if the module below fails to load. -->
+    <form id="form" onsubmit="event.preventDefault(); if (location.protocol === 'file:') error.textContent = 'Open this page through a web server, not as a file (see README).'">
+      <p>
+        <label for="name">First name</label><br>
+        <input id="name" name="name" autocomplete="username" required>
+      </p>
+      <p>
+        <label for="password">Password</label><br>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </p>
+      <button type="submit">🎅 Ho ho ho, show me!</button>
+    </form>
+    <p id="error" role="alert"></p>
+    <p class="note">You got your password from the organiser. It is unique to you.</p>
+  </section>
+
+  <section id="result" hidden>
+    <h2>Your assignment</h2>
+    <p>Hi <strong id="giver"></strong>, you are Secret Santa for:</p>
+    <p class="reveal"><strong id="receiver"></strong></p>
+    <p class="note">🤫 Keep it secret! Santa is watching. Close this tab when you are done.</p>
+    <button type="button" id="logout">Log out</button>
+  </section>
+
+  <script type="module">
+    import { decrypt, normalise } from "./santa.js";
+    const $ = (id) => document.getElementById(id);
+    $("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $("error").textContent = "";
+      const button = e.submitter;
+      button.disabled = true;
+      let data;
+      try {
+        // Fetched on every login, uncached, so a re-run of setup.js is picked up without a reload.
+        const res = await fetch("assignments.json", { cache: "no-store" });
+        if (!res.ok) throw new Error(res.status);
+        data = await res.json();
+      } catch {
+        $("error").textContent = "🎄 Couldn't load the draw. Has the organiser published assignments.json?";
+        button.disabled = false;
+        return;
+      }
+      try {
+        const entry = data[normalise($("name").value)];
+        if (!entry) throw new Error();
+        $("receiver").textContent = await decrypt(entry, $("password").value.trim());
+        $("giver").textContent = entry.name;
+        $("login").hidden = true;
+        $("result").hidden = false;
+      } catch {
+        // Same message for unknown name and wrong password, so no one can probe for names.
+        $("error").textContent = "🦌 Uh oh! Rudolph doesn't recognise that name or password. Try again.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    $("logout").addEventListener("click", () => {
+      $("form").reset();
+      $("receiver").textContent = $("giver").textContent = "";
+      $("result").hidden = true;
+      $("login").hidden = false;
+    });
+  </script>
+
+  <footer>❄️ Made with tinsel and love ❄️</footer>
+</body>
+</html>
